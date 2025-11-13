@@ -2,3 +2,4 @@ python-telegram-bot==13.0
 environs==14.3.0
 loging==0.0.1
 redis==5.0.0
+vk_api==11.10.0
