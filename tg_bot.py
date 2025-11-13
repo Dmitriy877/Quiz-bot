@@ -47,10 +47,10 @@ def handle_send_answer(update: Update, context: CallbackContext, CHOOSING, r, co
     return CHOOSING
 
 
-def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY, CHOOSING, r) -> int:
+def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY, CHOOSING, r, collect_quiz) -> int:
     chat_id = update.effective_chat.id
     guess_question = update.message.text.split('.')
-    answer = r.get(chat_id)
+    answer = collect_quiz[r.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
 
@@ -93,7 +93,7 @@ def main() -> None:
     
     start_with_arguments = partial(start, CHOOSING=CHOOSING)
     handle_new_question_request_with_arguments = partial(handle_new_question_request, TYPING_REPLY=TYPING_REPLY, collect_quiz=collect_quiz, r=r)
-    handle_solution_attempt_with_arguments = partial(handle_solution_attempt, TYPING_REPLY=TYPING_REPLY, CHOOSING=CHOOSING, r=r)
+    handle_solution_attempt_with_arguments = partial(handle_solution_attempt, TYPING_REPLY=TYPING_REPLY, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
     handle_send_answer_with_arguments = partial(handle_send_answer, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
 
     updater = Updater(telegram_bot_token)
