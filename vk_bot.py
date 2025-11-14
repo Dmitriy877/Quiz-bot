@@ -1,7 +1,7 @@
 import random
-import logging
 import json
 
+import logging
 from logging.handlers import RotatingFileHandler
 import vk_api as vk
 from vk_api.longpoll import VkLongPoll, VkEventType
@@ -78,15 +78,16 @@ def guess_question(event, vk_api, collect_quiz, keyboard, r):
 
 
 def main():
+
     env.read_env()
+
+    with open('quiz_data.json', 'r', encoding='utf-8') as file:
+        collect_quiz = json.load(file)
 
     telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
     chat_id = env.str('TELEGRAM_CHAT_ID')
     vk_group_token = env.str('VK_API_KEY')
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
-
-    with open('quiz_data.json', 'r', encoding='utf-8') as file:
-        collect_quiz = json.load(file)
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('vk_bot_loger')

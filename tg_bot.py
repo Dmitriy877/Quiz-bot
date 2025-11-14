@@ -1,16 +1,15 @@
-import logging
-
-from functools import partial
-from logging.handlers import RotatingFileHandler
-from environs import env
-import telegram
-from telegram import Update, ForceReply, ReplyKeyboardMarkup
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
-
 import json
 import random
-import os
+from functools import partial
+
+import logging
+from logging.handlers import RotatingFileHandler
+import telegram
 import redis
+from environs import env
+from telegram import Update
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
+
 
 class TelegramLogsHandler(logging.Handler):
     def __init__(self, log_bot, chat_id):
@@ -23,7 +22,7 @@ class TelegramLogsHandler(logging.Handler):
         self.log_bot.send_message(chat_id=self.chat_id, text=log_entry)
 
 
-def start(update: Update, context: CallbackContext, CHOOSING) -> int:
+def start(update: Update, context: CallbackContext, CHOOSING: int) -> int:
     """Send a message when the command /start is issued."""
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
@@ -36,7 +35,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Help!')
 
 
-def handle_new_question_request(update: Update, context: CallbackContext, TYPING_REPLY, collect_quiz, r) -> int:
+def handle_new_question_request(update: Update, context: CallbackContext, TYPING_REPLY: int, collect_quiz: dict, r) -> int:
     chat_id = update.effective_chat.id
     random_question = random.choice(list(collect_quiz.keys()))
     r.set(chat_id, random_question)
@@ -46,7 +45,7 @@ def handle_new_question_request(update: Update, context: CallbackContext, TYPING
         )
     return TYPING_REPLY
 
-def handle_send_answer(update: Update, context: CallbackContext, CHOOSING, r, collect_quiz) -> int:
+def handle_send_answer(update: Update, context: CallbackContext, CHOOSING: int, r, collect_quiz: dict) -> int:
     chat_id = update.effective_chat.id
     answer = collect_quiz[r.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
@@ -59,7 +58,7 @@ def handle_send_answer(update: Update, context: CallbackContext, CHOOSING, r, co
     return CHOOSING
 
 
-def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY, CHOOSING, r, collect_quiz) -> int:
+def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY: int, CHOOSING: int, r, collect_quiz: dict) -> int:
     chat_id = update.effective_chat.id
     guess_question = update.message.text.split('.')
     answer = collect_quiz[r.get(chat_id)]
@@ -85,13 +84,15 @@ def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REP
 
 
 def main() -> None:
+
     env.read_env()
-    telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
-    chat_id = env.str('TELEGRAM_CHAT_ID')
-    r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
     with open('quiz_data.json', 'r', encoding='utf-8') as file:
         collect_quiz = json.load(file)
+        
+    telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
+    chat_id = env.str('TELEGRAM_CHAT_ID')
+    r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('tg_bot_loger')
