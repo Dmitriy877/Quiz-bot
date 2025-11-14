@@ -8,6 +8,7 @@ env
 *.so
 *.json
 questions
+*.log
 
 # Distribution / packaging
 .Python

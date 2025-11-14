@@ -1,14 +1,26 @@
-from environs import env
 import logging
+
+from functools import partial
+from logging.handlers import RotatingFileHandler
+from environs import env
+import telegram
+from telegram import Update, ForceReply, ReplyKeyboardMarkup
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
+
 import json
 import random
 import os
-
-from functools import partial
-import telegram
 import redis
-from telegram import Update, ForceReply, ReplyKeyboardMarkup
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
+
+class TelegramLogsHandler(logging.Handler):
+    def __init__(self, log_bot, chat_id):
+        super().__init__()
+        self.chat_id = chat_id
+        self.log_bot = log_bot
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.log_bot.send_message(chat_id=self.chat_id, text=log_entry)
 
 
 def start(update: Update, context: CallbackContext, CHOOSING) -> int:
@@ -74,30 +86,27 @@ def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REP
 
 def main() -> None:
     env.read_env()
-    
-    
+    telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
+    chat_id = env.str('TELEGRAM_CHAT_ID')
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
     with open('quiz_data.json', 'r', encoding='utf-8') as file:
         collect_quiz = json.load(file)
 
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-    )
-
-    logger = logging.getLogger(__name__)
-
-    telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
+    log_bot = telegram.Bot(token=telegram_bot_token)
+    logger = logging.getLogger('tg_bot_loger')
+    logger.setLevel(logging.INFO)
+    logger.addHandler(TelegramLogsHandler(log_bot, chat_id))
+    logger.addHandler(RotatingFileHandler('tg_bot_log.log', maxBytes=200, backupCount=2))
 
     CHOOSING, TYPING_REPLY = range(2)
-    
+
     start_with_arguments = partial(start, CHOOSING=CHOOSING)
     handle_new_question_request_with_arguments = partial(handle_new_question_request, TYPING_REPLY=TYPING_REPLY, collect_quiz=collect_quiz, r=r)
     handle_solution_attempt_with_arguments = partial(handle_solution_attempt, TYPING_REPLY=TYPING_REPLY, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
     handle_send_answer_with_arguments = partial(handle_send_answer, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
 
     updater = Updater(telegram_bot_token)
-
     dispatcher = updater.dispatcher
 
     conv_handler = ConversationHandler(
@@ -123,9 +132,11 @@ def main() -> None:
 
     dispatcher.add_handler(conv_handler)
 
-    updater.start_polling()
-
-    updater.idle()
+    try:
+        updater.start_polling()
+        updater.idle()
+    except Exception as error:
+        logger.exception(f'TG Bot Has been crashed with error {error}')
 
 
 if __name__ == '__main__':
