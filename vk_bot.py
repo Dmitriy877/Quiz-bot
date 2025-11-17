@@ -79,15 +79,15 @@ def guess_question(event, vk_api, collect_quiz, keyboard, r):
             )
 
 
+def main():
 
     env.read_env()
-
 
     telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
     chat_id = env.str('TELEGRAM_CHAT_ID')
     vk_group_token = env.str('VK_API_KEY')
-    filefolder = env.str('FILEFOLDER_NAME')
-    collect_quiz = filefolder(filefolder)
+    quiz_questions_filefolder_name = env.str('QUIZ_QUESTIONS_FILEFOLDER_NAME')
+    collect_quiz = collect_quiz_in_file(quiz_questions_filefolder_name)
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
     log_bot = telegram.Bot(token=telegram_bot_token)
@@ -104,7 +104,6 @@ def guess_question(event, vk_api, collect_quiz, keyboard, r):
     keyboard.add_button('Новый вопрос', color=VkKeyboardColor.POSITIVE)
     keyboard.add_button('Сдаться', color=VkKeyboardColor.NEGATIVE)
 
-def main():
     keyboard.add_line()
     keyboard.add_button('Мой счет', color=VkKeyboardColor.PRIMARY)
 

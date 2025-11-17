@@ -91,8 +91,8 @@ def main() -> None:
 
     telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
     chat_id = env.str('TELEGRAM_CHAT_ID')
-    filefolder = env.str('FILEFOLDER_NAME')
-    collect_quiz = collect_quiz_in_file(filefolder)
+    quiz_questions_filefolder_name = env.str('QUIZ_QUESTIONS_FILEFOLDER_NAME')
+    collect_quiz = collect_quiz_in_file(quiz_questions_filefolder_name)
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
 
