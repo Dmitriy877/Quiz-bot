@@ -88,7 +88,13 @@ def main():
     vk_group_token = env.str('VK_API_KEY')
     quiz_questions_filefolder_name = env.str('QUIZ_QUESTIONS_FILEFOLDER_NAME')
     collect_quiz = collect_quiz_in_file(quiz_questions_filefolder_name)
-    r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
+    redis_host = env.str('REDIS_HOST')
+    redis_port = env.int('REDIS_PORT')
+    redis_database = env.int('REDIS_DATABASE')
+    redis_protocol = env.int('REDIS_PROTOCOL')
+    redis_charset = env.str('REDIS_CHARSET')
+
+    r = redis.Redis(host=redis_host, port=redis_port, db=redis_database, charset=redis_charset, decode_responses=True, protocol=redis_protocol)
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('vk_bot_loger')

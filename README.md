@@ -16,7 +16,11 @@ TELEGRAM_BOT_TOKEN = 'Токен Телеграмм Бота'
 VK_API_KEY = 'API токен группы телеграмм где будет отвечать бот, получается в настройках сообщества'
 TELEGRAM_CHAT_ID="Имя группы куда бот будет скидывать ошибки (необходимо добавитть бота в группу и дать ему права администратора)"
 QUIZ_QUESTIONS_FILEFOLDER_NAME='Имя папки где расположены вопросы для квиза в формате txt (Вопрос, пустая строка, ответ. (Слова вопрос, ответ, необходимо писать))'
-
+REDIS_HOST='localhost' 'Хост на котором распологается база данных redis https://github.com/redis/redis-py#getting-started (localhost для запуска на своем ПК),'
+REDIS_PORT=6379 'Порт на котором распологается база данных redis https://github.com/redis/redis-py#getting-started (6379 для запуска на своем ПК),'
+REDIS_DATABASE=0 'Логическую базу данных внутри одного экземпляра сервера Redis с которой будет работать клиент https://github.com/redis/redis-py#getting-started (например, 0 для запуска на своем ПК)'
+REDIS_CHARSET='utf-8' 'Кодировка символов при записи в базу данных'
+REDIS_PROTOCOL=3 'Версия протокола связи между клиентским приложением и сервером Redis https://github.com/redis/redis-py#getting-started'
 ```
 
 ###  Как запустить
