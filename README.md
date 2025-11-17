@@ -46,11 +46,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-* Сформируйте итоговый перечень вопросов, скачав вопросы в указанную в переменных окружения папку и запустив скрипт `collect_quiz_in_file.py`
-```sh
-python ./collect_quiz_in_file.py
-```
-
 * Запустите скрипт `vk_bot.py` для запуска бота Вконтакте:
 ```sh
 python ./vk_bot.py
