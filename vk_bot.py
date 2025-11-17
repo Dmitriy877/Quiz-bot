@@ -117,16 +117,18 @@ def main():
 
     try:
         for event in longpoll.listen():
-            if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                if event.text == 'Старт':
-                    start(event, vk_api, keyboard)
-
-                if event.text == 'Новый вопрос':
-                    send_new_message(event, vk_api, collect_quiz, keyboard, r)
-
-                if event.text == 'Сдаться':
-                    send_answer(event, vk_api, collect_quiz, keyboard, r)
-                guess_question(event, vk_api, collect_quiz, keyboard, r)
+            if event.type != VkEventType.MESSAGE_NEW and event.to_me:
+                continue
+            if event.text == 'Старт':
+                start(event, vk_api, keyboard)
+                continue
+            if event.text == 'Новый вопрос':
+                send_new_message(event, vk_api, collect_quiz, keyboard, r)
+                continue
+            if event.text == 'Сдаться':
+                send_answer(event, vk_api, collect_quiz, keyboard, r)
+                continue
+            guess_question(event, vk_api, collect_quiz, keyboard, r)
 
     except Exception as error:
         logger.exception(f'VK Bot Has been crashed with error {error}')
