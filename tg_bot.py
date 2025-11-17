@@ -62,12 +62,12 @@ def handle_send_answer(update: Update, context: CallbackContext, CHOOSING: int, 
 
 def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY: int, CHOOSING: int, r, collect_quiz: dict) -> int:
     chat_id = update.effective_chat.id
-    guess_question = update.message.text.split('.')
+    user_answer = update.message.text.split('.')
     answer = collect_quiz[r.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
 
-    if guess_question[0] in answer:
+    if user_answer[0] in answer:
         context.bot.send_message(
             chat_id=chat_id,
             text='Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
