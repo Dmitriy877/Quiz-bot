@@ -1,5 +1,7 @@
 import os
 import json
+import pathlib
+from pathlib import Path, PurePath
 from environs import env
 
 
@@ -7,7 +9,7 @@ def collect_quiz_in_file(filefolder: str) -> None:
     files_in_filefolder = os.listdir(filefolder)
     collected_quiz = dict()
     for file in files_in_filefolder:
-        with open(f'{filefolder}/{file}', 'r', encoding='KOI8-R') as file:
+        with open(PurePath(filefolder, file), 'r', encoding='KOI8-R') as file:
             questions = file.read()
             result = str(questions).split("\n\n\n")
         for s in result:
@@ -20,7 +22,7 @@ def collect_quiz_in_file(filefolder: str) -> None:
                     if 'Ответ' in d:
                         answer = d.split(':')[1]
                     collected_quiz[question] = answer
-    with open('quiz_data.json', 'w', encoding='utf-8') as file:
+    with open('quiz_data1.json', 'w', encoding='utf-8') as file:
         json.dump(collected_quiz, file, ensure_ascii=False, indent=4)
 
 
