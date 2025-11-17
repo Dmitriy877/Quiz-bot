@@ -10,6 +10,8 @@ from environs import env
 from telegram import Update
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
 
+from collect_quiz_in_file import collect_quiz_in_file
+
 
 class TelegramLogsHandler(logging.Handler):
     def __init__(self, log_bot, chat_id):
@@ -87,12 +89,12 @@ def main() -> None:
 
     env.read_env()
 
-    with open('quiz_data.json', 'r', encoding='utf-8') as file:
-        collect_quiz = json.load(file)
-        
     telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
     chat_id = env.str('TELEGRAM_CHAT_ID')
+    filefolder = env.str('FILEFOLDER_NAME')
+    collect_quiz = collect_quiz_in_file(filefolder)
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
+
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('tg_bot_loger')

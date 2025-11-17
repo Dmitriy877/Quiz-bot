@@ -10,6 +10,8 @@ from environs import env
 import redis
 import telegram
 
+from collect_quiz_in_file import collect_quiz_in_file
+
 class TelegramLogsHandler(logging.Handler):
     def __init__(self, log_bot, chat_id):
         super().__init__()
@@ -77,16 +79,15 @@ def guess_question(event, vk_api, collect_quiz, keyboard, r):
             )
 
 
-def main():
 
     env.read_env()
 
-    with open('quiz_data.json', 'r', encoding='utf-8') as file:
-        collect_quiz = json.load(file)
 
     telegram_bot_token = env.str('TELEGRAM_BOT_TOKEN')
     chat_id = env.str('TELEGRAM_CHAT_ID')
     vk_group_token = env.str('VK_API_KEY')
+    filefolder = env.str('FILEFOLDER_NAME')
+    collect_quiz = filefolder(filefolder)
     r = redis.Redis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True, protocol=3)
 
     log_bot = telegram.Bot(token=telegram_bot_token)
@@ -103,6 +104,7 @@ def main():
     keyboard.add_button('Новый вопрос', color=VkKeyboardColor.POSITIVE)
     keyboard.add_button('Сдаться', color=VkKeyboardColor.NEGATIVE)
 
+def main():
     keyboard.add_line()
     keyboard.add_button('Мой счет', color=VkKeyboardColor.PRIMARY)
 
@@ -119,7 +121,6 @@ def main():
 
                 if event.text == 'Сдаться':
                     send_answer(event, vk_api, collect_quiz, keyboard, r)
-
                 guess_question(event, vk_api, collect_quiz, keyboard, r)
 
     except Exception as error:
