@@ -117,7 +117,7 @@ def main():
 
     try:
         for event in longpoll.listen():
-            if event.type != VkEventType.MESSAGE_NEW and event.to_me:
+            if not (event.type == VkEventType.MESSAGE_NEW and event.to_me):
                 continue
             if event.text == 'Старт':
                 start(event, vk_api, keyboard)
