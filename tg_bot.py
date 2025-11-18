@@ -1,4 +1,3 @@
-import json
 import random
 from functools import partial
 
@@ -8,7 +7,15 @@ import telegram
 import redis
 from environs import env
 from telegram import Update
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext, RegexHandler, ConversationHandler)
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    MessageHandler,
+    Filters,
+    CallbackContext,
+    RegexHandler,
+    ConversationHandler
+)
 
 from collect_quiz_in_file import collect_quiz_in_file
 
@@ -28,7 +35,11 @@ def start(update: Update, context: CallbackContext, CHOOSING: int) -> int:
     """Send a message when the command /start is issued."""
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Привет! Я бот для викторин", reply_markup=reply_markup)
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Привет! Я бот для викторин",
+        reply_markup=reply_markup
+    )
     return CHOOSING
 
 
@@ -37,19 +48,34 @@ def help_command(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Help!')
 
 
-def handle_new_question_request(update: Update, context: CallbackContext, TYPING_REPLY: int, collect_quiz: dict, r) -> int:
+def handle_new_question_request(
+    update: Update,
+    context: CallbackContext,
+    TYPING_REPLY: int,
+    collect_quiz: dict,
+    redis_config
+) -> int:
+
     chat_id = update.effective_chat.id
     random_question = random.choice(list(collect_quiz.keys()))
-    r.set(chat_id, random_question)
+    redis_config.set(chat_id, random_question)
     context.bot.send_message(
             chat_id=chat_id,
             text=random_question,
         )
     return TYPING_REPLY
 
-def handle_send_answer(update: Update, context: CallbackContext, CHOOSING: int, r, collect_quiz: dict) -> int:
+
+def handle_send_answer(
+    update: Update,
+    context: CallbackContext,
+    CHOOSING: int,
+    redis_config,
+    collect_quiz: dict
+) -> int:
+
     chat_id = update.effective_chat.id
-    answer = collect_quiz[r.get(chat_id)]
+    answer = collect_quiz[redis_config.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
     context.bot.send_message(
@@ -60,10 +86,18 @@ def handle_send_answer(update: Update, context: CallbackContext, CHOOSING: int, 
     return CHOOSING
 
 
-def handle_solution_attempt(update: Update, context: CallbackContext, TYPING_REPLY: int, CHOOSING: int, r, collect_quiz: dict) -> int:
+def handle_solution_attempt(
+    update: Update,
+    context: CallbackContext,
+    TYPING_REPLY: int,
+    CHOOSING: int,
+    redis_config,
+    collect_quiz: dict
+) -> int:
+
     chat_id = update.effective_chat.id
     user_answer = update.message.text.split('.')
-    answer = collect_quiz[r.get(chat_id)]
+    answer = collect_quiz[redis_config.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
 
@@ -99,44 +133,77 @@ def main() -> None:
     redis_protocol = env.int('REDIS_PROTOCOL')
     redis_charset = env.str('REDIS_CHARSET')
 
-    r = redis.Redis(host=redis_host, port=redis_port, db=redis_database, charset=redis_charset, decode_responses=True, protocol=redis_protocol)
-
+    redis_config = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        db=redis_database,
+        charset=redis_charset,
+        decode_responses=True,
+        protocol=redis_protocol
+    )
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('tg_bot_loger')
     logger.setLevel(logging.INFO)
     logger.addHandler(TelegramLogsHandler(log_bot, chat_id))
-    logger.addHandler(RotatingFileHandler('tg_bot_log.log', maxBytes=200, backupCount=2))
+    logger.addHandler(RotatingFileHandler(
+        'tg_bot_log.log',
+        maxBytes=200,
+        backupCount=2
+    ))
 
     CHOOSING, TYPING_REPLY = range(2)
 
     start_with_arguments = partial(start, CHOOSING=CHOOSING)
-    handle_new_question_request_with_arguments = partial(handle_new_question_request, TYPING_REPLY=TYPING_REPLY, collect_quiz=collect_quiz, r=r)
-    handle_solution_attempt_with_arguments = partial(handle_solution_attempt, TYPING_REPLY=TYPING_REPLY, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
-    handle_send_answer_with_arguments = partial(handle_send_answer, CHOOSING=CHOOSING, r=r, collect_quiz=collect_quiz)
+
+    handle_new_question_request_with_arguments = partial(
+        handle_new_question_request,
+        TYPING_REPLY=TYPING_REPLY,
+        collect_quiz=collect_quiz,
+        redis_config=redis_config
+    )
+
+    handle_solution_attempt_with_arguments = partial(
+        handle_solution_attempt,
+        TYPING_REPLY=TYPING_REPLY,
+        CHOOSING=CHOOSING,
+        redis_config=redis_config,
+        collect_quiz=collect_quiz
+    )
+
+    handle_send_answer_with_arguments = partial(
+        handle_send_answer,
+        CHOOSING=CHOOSING,
+        redis_config=redis_config,
+        collect_quiz=collect_quiz
+    )
 
     updater = Updater(telegram_bot_token)
     dispatcher = updater.dispatcher
 
     conv_handler = ConversationHandler(
 
-        entry_points = [CommandHandler('start', start_with_arguments)],
-
-        states = {
+        entry_points=[CommandHandler('start', start_with_arguments)],
+        states={
             CHOOSING: [RegexHandler('^(Новый вопрос)$',
                                     handle_new_question_request_with_arguments,
                                     pass_user_data=True)
-                       ],
+            ],
 
             TYPING_REPLY: [
-                
-                MessageHandler(Filters.text('Сдаться'), handle_send_answer_with_arguments, pass_user_data=True),
-                MessageHandler(Filters.text & ~Filters.command, partial(handle_solution_attempt_with_arguments)),
-                           ],
-                  },
 
+                MessageHandler(
+                    Filters.text('Сдаться'),
+                    handle_send_answer_with_arguments,
+                    pass_user_data=True
+                ),
+                MessageHandler(
+                    Filters.text & ~Filters.command,
+                    partial(handle_solution_attempt_with_arguments)
+                ),
+            ],
+        },
         fallbacks=[]
-
     )
 
     dispatcher.add_handler(conv_handler)

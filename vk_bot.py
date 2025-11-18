@@ -1,5 +1,4 @@
 import random
-import json
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -11,6 +10,7 @@ import redis
 import telegram
 
 from collect_quiz_in_file import collect_quiz_in_file
+
 
 class TelegramLogsHandler(logging.Handler):
     def __init__(self, log_bot, chat_id):
@@ -32,10 +32,10 @@ def start(event, vk_api, keyboard):
     )
 
 
-def send_new_message(event, vk_api, collect_quiz, keyboard, r):
+def send_new_message(event, vk_api, collect_quiz, keyboard, redis_config):
     random_question = random.choice(list(collect_quiz.keys()))
     chat_id = event.user_id
-    r.set(chat_id, random_question)
+    redis_config.set(chat_id, random_question)
     text = [random_question]
     vk_api.messages.send(
         user_id=chat_id,
@@ -45,31 +45,31 @@ def send_new_message(event, vk_api, collect_quiz, keyboard, r):
     )
 
 
-def send_answer(event, vk_api, collect_quiz, keyboard, r):
+def send_answer(event, vk_api, collect_quiz, keyboard, redis_config):
     chat_id = event.user_id
-    answer = str(collect_quiz[r.get(chat_id)])
+    answer = str(collect_quiz[redis_config.get(chat_id)])
     vk_api.messages.send(
         user_id=chat_id,
         message=answer,
         random_id=random.randint(1, 1000),
         keyboard=keyboard.get_keyboard()
     )
-    r.delete(chat_id)
+    redis_config.delete(chat_id)
 
 
-def guess_question(event, vk_api, collect_quiz, keyboard, r):
+def guess_question(event, vk_api, collect_quiz, keyboard, redis_config):
     chat_id = event.user_id
-    guess_question = event.text.split(' ')
-    if r.exists(chat_id):
-        answer = collect_quiz[r.get(chat_id)]
-        if guess_question[0] in answer:
+    user_answer_words = event.text.split(' ')
+    if redis_config.exists(chat_id):
+        answer = collect_quiz[redis_config.get(chat_id)]
+        if user_answer_words[0] in answer:
             vk_api.messages.send(
                 user_id=chat_id,
                 message='Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
                 random_id=random.randint(1, 1000),
                 keyboard=keyboard.get_keyboard()
             )
-            r.delete(chat_id)
+            redis_config.delete(chat_id)
         else:
             vk_api.messages.send(
                 user_id=chat_id,
@@ -94,12 +94,23 @@ def main():
     redis_protocol = env.int('REDIS_PROTOCOL')
     redis_charset = env.str('REDIS_CHARSET')
 
-    r = redis.Redis(host=redis_host, port=redis_port, db=redis_database, charset=redis_charset, decode_responses=True, protocol=redis_protocol)
+    redis_config = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        db=redis_database,
+        charset=redis_charset,
+        decode_responses=True,
+        protocol=redis_protocol
+    )
 
     log_bot = telegram.Bot(token=telegram_bot_token)
     logger = logging.getLogger('vk_bot_loger')
     logger.setLevel(logging.INFO)
-    logger.addHandler(RotatingFileHandler('vk_bot_log.log', maxBytes=200, backupCount=2))
+    logger.addHandler(RotatingFileHandler(
+        'vk_bot_log.log',
+        maxBytes=200,
+        backupCount=2
+    ))
     logger.addHandler(TelegramLogsHandler(log_bot, chat_id))
 
     vk_session = vk.VkApi(token=vk_group_token)
@@ -123,12 +134,12 @@ def main():
                 start(event, vk_api, keyboard)
                 continue
             if event.text == 'Новый вопрос':
-                send_new_message(event, vk_api, collect_quiz, keyboard, r)
+                send_new_message(event, vk_api, collect_quiz, keyboard, redis_config)
                 continue
             if event.text == 'Сдаться':
-                send_answer(event, vk_api, collect_quiz, keyboard, r)
+                send_answer(event, vk_api, collect_quiz, keyboard, redis_config)
                 continue
-            guess_question(event, vk_api, collect_quiz, keyboard, r)
+            guess_question(event, vk_api, collect_quiz, keyboard, redis_config)
 
     except Exception as error:
         logger.exception(f'VK Bot Has been crashed with error {error}')
