@@ -53,12 +53,12 @@ def handle_new_question_request(
     context: CallbackContext,
     TYPING_REPLY: int,
     collect_quiz: dict,
-    redis_config
+    redis_db
 ) -> int:
 
     chat_id = update.effective_chat.id
     random_question = random.choice(list(collect_quiz.keys()))
-    redis_config.set(chat_id, random_question)
+    redis_db.set(chat_id, random_question)
     context.bot.send_message(
             chat_id=chat_id,
             text=random_question,
@@ -70,12 +70,12 @@ def handle_send_answer(
     update: Update,
     context: CallbackContext,
     CHOOSING: int,
-    redis_config,
+    redis_db,
     collect_quiz: dict
 ) -> int:
 
     chat_id = update.effective_chat.id
-    answer = collect_quiz[redis_config.get(chat_id)]
+    answer = collect_quiz[redis_db.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
     context.bot.send_message(
@@ -91,13 +91,13 @@ def handle_solution_attempt(
     context: CallbackContext,
     TYPING_REPLY: int,
     CHOOSING: int,
-    redis_config,
+    redis_db,
     collect_quiz: dict
 ) -> int:
 
     chat_id = update.effective_chat.id
     user_answer = update.message.text.split('.')
-    answer = collect_quiz[redis_config.get(chat_id)]
+    answer = collect_quiz[redis_db.get(chat_id)]
     custom_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
 
@@ -133,7 +133,7 @@ def main() -> None:
     redis_protocol = env.int('REDIS_PROTOCOL')
     redis_charset = env.str('REDIS_CHARSET')
 
-    redis_config = redis.Redis(
+    redis_db = redis.Redis(
         host=redis_host,
         port=redis_port,
         db=redis_database,
@@ -160,21 +160,21 @@ def main() -> None:
         handle_new_question_request,
         TYPING_REPLY=TYPING_REPLY,
         collect_quiz=collect_quiz,
-        redis_config=redis_config
+        redis_db=redis_db
     )
 
     handle_solution_attempt_with_arguments = partial(
         handle_solution_attempt,
         TYPING_REPLY=TYPING_REPLY,
         CHOOSING=CHOOSING,
-        redis_config=redis_config,
+        redis_db=redis_db,
         collect_quiz=collect_quiz
     )
 
     handle_send_answer_with_arguments = partial(
         handle_send_answer,
         CHOOSING=CHOOSING,
-        redis_config=redis_config,
+        redis_db=redis_db,
         collect_quiz=collect_quiz
     )
 

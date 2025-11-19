@@ -32,10 +32,10 @@ def start(event, vk_api, keyboard):
     )
 
 
-def send_new_message(event, vk_api, collect_quiz, keyboard, redis_config):
+def send_new_message(event, vk_api, collect_quiz, keyboard, redis_db):
     random_question = random.choice(list(collect_quiz.keys()))
     chat_id = event.user_id
-    redis_config.set(chat_id, random_question)
+    redis_db.set(chat_id, random_question)
     text = [random_question]
     vk_api.messages.send(
         user_id=chat_id,
@@ -45,23 +45,23 @@ def send_new_message(event, vk_api, collect_quiz, keyboard, redis_config):
     )
 
 
-def send_answer(event, vk_api, collect_quiz, keyboard, redis_config):
+def send_answer(event, vk_api, collect_quiz, keyboard, redis_db):
     chat_id = event.user_id
-    answer = str(collect_quiz[redis_config.get(chat_id)])
+    answer = str(collect_quiz[redis_db.get(chat_id)])
     vk_api.messages.send(
         user_id=chat_id,
         message=answer,
         random_id=random.randint(1, 1000),
         keyboard=keyboard.get_keyboard()
     )
-    redis_config.delete(chat_id)
+    redis_db.delete(chat_id)
 
 
-def guess_question(event, vk_api, collect_quiz, keyboard, redis_config):
+def guess_question(event, vk_api, collect_quiz, keyboard, redis_db):
     chat_id = event.user_id
     user_answer_words = event.text.split(' ')
-    if redis_config.exists(chat_id):
-        answer = collect_quiz[redis_config.get(chat_id)]
+    if redis_db.exists(chat_id):
+        answer = collect_quiz[redis_db.get(chat_id)]
         if user_answer_words[0] in answer:
             vk_api.messages.send(
                 user_id=chat_id,
@@ -69,7 +69,7 @@ def guess_question(event, vk_api, collect_quiz, keyboard, redis_config):
                 random_id=random.randint(1, 1000),
                 keyboard=keyboard.get_keyboard()
             )
-            redis_config.delete(chat_id)
+            redis_db.delete(chat_id)
         else:
             vk_api.messages.send(
                 user_id=chat_id,
@@ -94,7 +94,7 @@ def main():
     redis_protocol = env.int('REDIS_PROTOCOL')
     redis_charset = env.str('REDIS_CHARSET')
 
-    redis_config = redis.Redis(
+    redis_db = redis.Redis(
         host=redis_host,
         port=redis_port,
         db=redis_database,
@@ -134,12 +134,12 @@ def main():
                 start(event, vk_api, keyboard)
                 continue
             if event.text == 'Новый вопрос':
-                send_new_message(event, vk_api, collect_quiz, keyboard, redis_config)
+                send_new_message(event, vk_api, collect_quiz, keyboard, redis_db)
                 continue
             if event.text == 'Сдаться':
-                send_answer(event, vk_api, collect_quiz, keyboard, redis_config)
+                send_answer(event, vk_api, collect_quiz, keyboard, redis_db)
                 continue
-            guess_question(event, vk_api, collect_quiz, keyboard, redis_config)
+            guess_question(event, vk_api, collect_quiz, keyboard, redis_db)
 
     except Exception as error:
         logger.exception(f'VK Bot Has been crashed with error {error}')
